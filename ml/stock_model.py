@@ -1,20 +1,28 @@
-import pandas as pd
 from clickhouse_driver import Client
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
+import pandas as pd
 
-client = Client('localhost')
+client = Client(host='clickhouse', user='etl_user', password='strong_password_here')
 
-query = "SELECT open, high, low, close, volume FROM stock.daily_stock"
+query = "SELECT timestamp, open, high, low, close, volume FROM stock.daily_stock"
 data = client.execute(query)
-df = pd.DataFrame(data, columns=["open", "high", "low", "close", "volume"])
+df = pd.DataFrame(data, columns=["timestamp", "open", "high", "low", "close", "volume"])
+df['timestamp'] = pd.to_datetime(df['timestamp'])
 
-X = df[["open", "high", "low", "volume"]]
-y = df["close"]
+X = df[['open', 'high', 'low', 'volume']]
+y = df['close']
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import root_mean_squared_error
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 model = LinearRegression()
 model.fit(X_train, y_train)
 
-print("R^2 score:", model.score(X_test, y_test))
+y_pred = model.predict(X_test)
+rmse = root_mean_squared_error(y_test, y_pred, squared=False)
+print(f"RMSE: {rmse}")
+
+import joblib
+joblib.dump(model, '/opt/airflow/dags/model.joblib')

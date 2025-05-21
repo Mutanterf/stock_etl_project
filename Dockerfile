@@ -7,7 +7,7 @@ RUN chmod +x /create_user.sh
 
 USER airflow
 
-RUN pip install --user clickhouse-driver
+RUN pip install --user clickhouse-driver dbt-core dbt-clickhouse
 
 ENTRYPOINT ["/create_user.sh"]
 CMD ["airflow", "webserver"]

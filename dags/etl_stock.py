@@ -4,6 +4,8 @@ from datetime import datetime
 import requests, pandas as pd
 import psycopg2
 from sqlalchemy import create_engine
+from airflow.operators.bash import BashOperator
+from train_model import train_model
 
 def fetch_data():
     # url = "https://www.alphavantage.co/query"
@@ -71,5 +73,6 @@ with DAG("etl_stock_pipeline", schedule_interval="@daily", default_args=default_
     fetch = PythonOperator(task_id="fetch_data", python_callable=fetch_data)
     load_pg = PythonOperator(task_id="load_postgres", python_callable=load_to_postgres)
     load_ch = PythonOperator(task_id="load_clickhouse", python_callable=transfer_to_clickhouse)
-
-    fetch >> load_pg >> load_ch
+    run_dbt = BashOperator(task_id='run_dbt', bash_command='cd /opt/airflow/dags/stock_dbt_project && dbt run')
+    train_task = PythonOperator(task_id='train_model',python_callable=train_model)
+    fetch >> load_pg >> load_ch >> run_dbt >> train_task
